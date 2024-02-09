@@ -1,42 +1,47 @@
 import random
 
-squares = [[10,5], [20,5]]
+squares = [[10,5,5,5], [20,5,5,5]]
 
 
-MAX_X = 30
-MAX_Y = 15
+max_x = 30
+max_y = 15
 
 starting_xy = [0,0]
 
-for _ in range(1):
+for _ in range(5):
 
-    first_xy = [random.randint(-30, 30), random.randint(0, 15)]
+    first_xy = [random.randint(-30, 30), random.randint(1, 5)]
 
     vector = [first_xy[0]-starting_xy[0], first_xy[1]-starting_xy[1]]
 
+    if(-max_x > vector[0]) or (vector[0] > max_x):
+        continue
+    
     x_add = 1
     y_add = 1
+    if vector[0] >= 0:
+        x_add = 1
+    else:
+        x_add = -1
 
     while vector[1] > 0:
-        if vector[0] == MAX_X or vector[0] == -MAX_X:
+        if vector[0] == max_x or vector[0] == -max_x:
             x_add = -x_add
-            print("pálya", vector)
-        if vector[1] == MAX_Y or vector[1] == -MAX_Y:
+
+        if vector[1] == max_y:
             y_add = -y_add
-            print("pálya", vector)
 
         for cord in squares:
-            if vector == cord:
-                if vector[0] == cord[0]:
+            if(vector[0] in range(cord[0], cord[0]+cord[2]) and vector[1] in range(cord[1], cord[1]+cord[3])):
+                if((vector[0] == cord[0]) or vector[0] == cord[0]+cord[2]):
                     x_add = -x_add
-                    print(vector)
-                if vector[1] == cord[1]:
+                    print(vector, "x")
+                if((vector[1] == cord[1]) or vector[1] == cord[1]+cord[3]):
                     y_add = -y_add
-                    print(vector)
-            
-
-
-        vector = [vector[0]+x_add, vector[1]+y_add]
+                    print(vector, "y")
+        
+        vector = [vector[0] + x_add, vector[1] + y_add]
 
     starting_xy = vector
-    print(starting_xy)
+    
+    
