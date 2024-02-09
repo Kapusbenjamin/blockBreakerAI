@@ -15,19 +15,18 @@ for _ in range(10):
     x_add = 1
     y_add = 1
 
+    if vector[0] >= 0 : x_add = 1 
+    else: x_add = -1
+
     while vector[1] > 0:
-        if vector[0] == MAX_X:
-            x_add = -1
+        if vector[0] == MAX_X or vector[0] == -MAX_X:
+            x_add = -x_add
             print(vector)
-        if vector[0] == -MAX_X:
-            x_add = 1
+            print(x_add)
+        if vector[1] == MAX_Y or vector[1] == -MAX_Y:
+            y_add = -y_add
             print(vector)
-        if vector[1] == MAX_Y:
-            y_add = -1
-            print(vector)
-        if vector[1] == -MAX_Y:
-            y_add = 1
-            print(vector)
+            print(y_add)
 
         vector = [vector[0]+x_add, vector[1]+y_add]
 
