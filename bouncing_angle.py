@@ -17,9 +17,7 @@ for _ in range(10):
     
     x_add = 1
     y_add = 1
-    if vector[0] >= 0:
-        x_add = 1
-    else:
+    if vector[0] < 0:
         x_add = -1
 
     while vector[1] > 0:

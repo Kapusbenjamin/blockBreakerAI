@@ -3,6 +3,7 @@ import numpy as np
 from PIL import ImageGrab
 import pytesseract
 import pyautogui
+import math
 
 # Kép beolvasása
 # Példa koordináták
@@ -46,21 +47,21 @@ for contour in contours:
     peri = cv2.arcLength(contour, True)
 
     # Kontúr közelítése egy sokszöggel
-    approx = cv2.approxPolyDP(contour, 0.04 * peri, True)
+    approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
 
     square_x, square_y, square_width, square_height = 5, 270, 555, 570
     
     # Közelített alakzat vizsgálata
-    if len(approx) == 4 and peri >= 60:
+    if len(approx) == 4 and peri >= 70:
         square_x, square_y, square_width, square_height = square_x+approx[0][0][0]+5, square_y+approx[0][0][1]+10, 45, 35
-        findOne()
+        # findOne()
         squares.append(approx)
-    elif len(approx) == 3 and peri >= 35:
+    elif len(approx) == 3 and peri >= 45:
         square_x, square_y, square_width, square_height = square_x+approx[0][0][0], square_y+approx[1][0][1]-20, 45, 20
-        findOne()
+        # findOne()
         triangles.append(approx)
         
-print(triangles)
+# print(squares)
     
 # Eredeti képen való megjelenítés
 cv2.drawContours(image_np, squares, -1, (0, 255, 0), 2)
