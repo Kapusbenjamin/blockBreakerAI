@@ -11,8 +11,8 @@ square_x, square_y, square_width, square_height = 5, 270, 555, 570
 def findOne():
     pytesseract.pytesseract.tesseract_cmd = r'D:\Alkalmazasok\Tesseract\tesseract.exe'
     
-    pyautogui.moveTo(x=square_x, y=square_y, duration=0.2)
-    pyautogui.moveTo(x=square_x+square_width, y=square_y+square_height, duration=0.2)
+    # pyautogui.moveTo(x=square_x, y=square_y, duration=0.2)
+    # pyautogui.moveTo(x=square_x+square_width, y=square_y+square_height, duration=0.2)
 
     # Képernyőrészlet elkapása a négyzet körül
     screenshot = ImageGrab.grab(bbox=(square_x, square_y, square_x + square_width, square_y + square_height))
@@ -51,11 +51,11 @@ for contour in contours:
     square_x, square_y, square_width, square_height = 5, 270, 555, 570
     
     # Közelített alakzat vizsgálata
-    if len(approx) == 4 and peri >= 50:
+    if len(approx) == 4 and peri >= 60:
         square_x, square_y, square_width, square_height = square_x+approx[0][0][0]+5, square_y+approx[0][0][1]+10, 45, 35
         findOne()
         squares.append(approx)
-    elif len(approx) == 3 and peri >= 25:
+    elif len(approx) == 3 and peri >= 35:
         square_x, square_y, square_width, square_height = square_x+approx[0][0][0], square_y+approx[1][0][1]-20, 45, 20
         findOne()
         triangles.append(approx)

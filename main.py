@@ -14,7 +14,7 @@ def get_pixel_color(x, y):
 # Példa koordináták
 # monitor_x, monitor_y = 280, 980
 monitor_x, monitor_y = 513, 263
-pyautogui.moveTo(x=monitor_x, y=monitor_y, duration=1)
+# pyautogui.moveTo(x=monitor_x, y=monitor_y, duration=1)
 
 # Az első pont színének lekérése
 color1 = (255,255,252)
