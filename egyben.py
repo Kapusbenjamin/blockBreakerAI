@@ -19,6 +19,8 @@ def recognize_text(monitor_x, monitor_y, width, height, type="num"):
         recognized_text = pytesseract.image_to_string(screenshot, config='--psm 6 --oem 3')
     elif type == "num":
         recognized_text = pytesseract.image_to_string(screenshot, config='--psm 1 --oem 3 outputbase digits')
+    elif type == "classic":
+        recognized_text = pytesseract.image_to_string(screenshot, config='--psm 6 --oem 3 outputbase digits')
     
     time.sleep(1)
 
@@ -117,9 +119,16 @@ triangles = []
 #Felismert szöveg a befejezéshez
 text = ""
 
-#Felismert szám a kezdéshez
-balls = int(recognize_text(10, 845, 545, 35).strip())
-
+#Felismert sorok száma a kezdéshez (felül. pl.: line 26)
+rows = 0
+#Lépésa módtól függően. Ha classic akkor +1 egyébként -1
+step = -1
+try:
+    rows = int(recognize_text(280, 155, 50, 35).strip())
+except:
+    rows = 1
+    step = 1
+    
 #Kezdőpozíció
 starting_xy = [0,0]
 
@@ -135,19 +144,23 @@ while(text != "CONTINUE"):
     num = random.randint(5,555)
     pyautogui.click(x=num, y=865)
     pyautogui.moveTo(250,500)
+
+    remaining_rows_now = 999
+    #Addig olvassa a számot, míg nem csökken a sorok száma
+    while(rows+step != remaining_rows_now):
+        if step == -1:
+            remaining_rows_now = int(recognize_text(280, 155, 50, 35).strip())
+        else:
+            remaining_rows_now = int(recognize_text(230, 140, 245, 60, "classic").strip())
     
-    # Várakozás egy kicsit
-    time.sleep(2)
+    #Sorok számának felülírása    
+    rows = remaining_rows_now
     
     #Befejezés ha leértek a labdák és COUNTINUE megjelenik
-    text = recognize_text(95, 675, 175, 45, "text").strip()
-
-    landed_balls = 0
-
-    while(balls > landed_balls):
-        time.sleep(5)
-        landed_balls = recognize_text(10, 845, 545, 35).strip()
-        if(landed_balls != ''):
-            landed_balls = int(landed_balls)
-        else:
-            landed_balls = 0
+    # pyautogui.moveTo(95, 675, 1)
+    # pyautogui.moveTo(95+175, 675+45, 1)
+    if step == -1:
+        text = recognize_text(95, 675, 175, 45, "text").strip()
+    else:
+        text = recognize_text(95, 775, 175, 45, "text").strip()
+    
