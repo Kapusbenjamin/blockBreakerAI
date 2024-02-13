@@ -6,6 +6,56 @@ from PIL import ImageGrab
 import pytesseract
 import cv2
 import numpy as np
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import Adam
+
+class DeepQNetwork:
+    def __init__(self, state_size, action_size):
+        self.model = self.build_model(state_size, action_size)
+
+    def build_model(self, state_size, action_size):
+        model = Sequential()
+        model.add(Dense(24, input_dim=state_size, activation='relu'))
+        model.add(Dense(24, activation='relu'))
+        model.add(Dense(action_size, activation='linear'))
+        model.compile(loss='mse', optimizer=Adam(lr=0.001))
+        return model
+
+class Agent:
+    def __init__(self, state_size, action_size):
+        self.state_size = state_size
+        self.action_size = action_size
+        self.memory = []
+        self.gamma = 0.95  # discount factor
+        self.epsilon = 1.0  # exploration rate
+        self.epsilon_decay = 0.995
+        self.epsilon_min = 0.01
+        self.model = DeepQNetwork(state_size, action_size)
+
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+
+    def act(self, state):
+        if np.random.rand() <= self.epsilon:
+            return 
+        q_values = self.model.model.predict(state)
+        return np.argmax(q_values[0])
+
+    def replay(self, batch_size):
+        if len(self.memory) < batch_size:
+            return
+        minibatch = np.random.choice(self.memory, batch_size, replace=False)
+        for state, action, reward, next_state, done in minibatch:
+            target = reward
+            if not done:
+                target = (reward + self.gamma * np.amax(self.model.model.predict(next_state)[0]))
+            target_f = self.model.model.predict(state)
+            target_f[0][action] = target
+            self.model.model.fit(state, target_f, epochs=1, verbose=0)
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
 
 def recognize_text(monitor_x, monitor_y, width, height, type="num"):
     pytesseract.pytesseract.tesseract_cmd = r'D:\Alkalmazasok\Tesseract\tesseract.exe'
@@ -61,9 +111,12 @@ def bouncing():
         
         vector = [vector[0] + x_add, vector[1] + y_add]
 
-    starting_xy = vector
+    return np.array(vector)
     
 def get_squares_triangles():
+    squares = []
+    triangles = []
+    
     # Képernyőrészlet elkapása a négyzet körül
     square_x, square_y, square_width, square_height = 5, 270, 555, 570
     screenshot = ImageGrab.grab(bbox=(square_x, square_y, square_x + square_width, square_y + square_height))
@@ -107,14 +160,37 @@ def get_squares_triangles():
     cv2.imshow("Squares and Triangles", image_np)
     cv2.waitKey(2000)
     cv2.destroyAllWindows()
+    
+    return squares, triangles
+
+def calculate_reward():
+    #Négyzetek, h-szögek keresése
+    new_squares, new_triangles = get_squares_triangles()
+
+    if(len(squares)+len(triangles) > len(new_squares)+len(new_triangles)):
+        reward = ((len(squares)+len(triangles))-(len(new_squares)+len(new_triangles)))*100
+        squares = new_squares
+        triangles = new_triangles
+        return reward-100
+    else:
+        squares = new_squares
+        triangles = new_triangles
+        return -100
+
+def check_game_over():
+    #Befejezés ha leértek a labdák és COUNTINUE megjelenik
+    # pyautogui.moveTo(95, 675, 1)
+    # pyautogui.moveTo(95+175, 675+45, 1)
+    if step == -1:
+        text = recognize_text(95, 675, 175, 45, "text").strip()
+    else:
+        text = recognize_text(95, 775, 175, 45, "text").strip()
+    
+    return text == "CONTINUE"
 
 #Maximumok
 max_x = 250
 max_y = 800
-
-# Négyzetek és háromszögek tárolására szolgáló listák
-squares = []
-triangles = []
 
 #Felismert szöveg a befejezéshez
 text = ""
@@ -129,20 +205,27 @@ except:
     rows = 1
     step = 1
     
-#Kezdőpozíció
-starting_xy = [0,0]
+# Játék ügynök létrehozása
+agent = Agent(state_size=2, action_size=1)
 
-while(text != "CONTINUE"):
+#Kezdőpozíció
+starting_xy = np.array([[0, 0]])
+
+# Négyzetek és háromszögek tárolására szolgáló listák
+squares = []
+triangles = []
+
+#Négyzetek, h-szögek keresése
+squares, triangles = get_squares_triangles()
+
+total_reward = 0
+
+for episode in range(1000):
     
-    #Minden kör után legyen üres
-    squares = []
-    triangles = []
-    
-    #Négyzetek, h-szögek keresése
-    get_squares_triangles()
-    
-    num = random.randint(5,555)
-    pyautogui.click(x=num, y=865)
+    x_num = random.randint(5,555)
+    y_num = random.randint(5,800)
+    action = np.array(x_num, y_num)
+    pyautogui.click(x=x_num, y=y_num)
     pyautogui.moveTo(250,500)
 
     remaining_rows_now = 999
@@ -156,11 +239,16 @@ while(text != "CONTINUE"):
     #Sorok számának felülírása    
     rows = remaining_rows_now
     
-    #Befejezés ha leértek a labdák és COUNTINUE megjelenik
-    # pyautogui.moveTo(95, 675, 1)
-    # pyautogui.moveTo(95+175, 675+45, 1)
-    if step == -1:
-        text = recognize_text(95, 675, 175, 45, "text").strip()
-    else:
-        text = recognize_text(95, 775, 175, 45, "text").strip()
-    
+     # Jutalom és következő állapot számítása
+    reward = calculate_reward()
+    total_reward += reward
+    done = check_game_over()  # Ellenőrizd, hogy a játék végetért-e
+
+    # Ügynök tanulása és lépés a következő állapotba
+    next_state = bouncing()
+    agent.remember(starting_xy, action, reward, next_state, done)
+    agent.replay(batch_size=32)
+
+    if done:
+        print("Epizód: {}/{}, Jutalom: {}".format(episode, 1000, total_reward))
+        break
