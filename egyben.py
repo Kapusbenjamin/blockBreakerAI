@@ -9,6 +9,7 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
+import tkinter as tk
 
 class DeepQNetwork:
     def __init__(self, state_size, action_size):
@@ -19,7 +20,7 @@ class DeepQNetwork:
         model.add(Dense(24, input_dim=state_size, activation='relu'))
         model.add(Dense(24, activation='relu'))
         model.add(Dense(action_size, activation='linear'))
-        model.compile(loss='mse', optimizer=Adam(lr=0.001))
+        model.compile(loss='mse', optimizer=Adam(learning_rate=0.001))
         return model
 
 class Agent:
@@ -36,9 +37,9 @@ class Agent:
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
-    def act(self, state):
+    def choose_action(self, state):
         if np.random.rand() <= self.epsilon:
-            return 
+            return np.array([random.randint(-max_x, max_x), random.randint(5, max_y/2)])
         q_values = self.model.model.predict(state)
         return np.argmax(q_values[0])
 
@@ -55,7 +56,6 @@ class Agent:
             self.model.model.fit(state, target_f, epochs=1, verbose=0)
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-
 
 def recognize_text(monitor_x, monitor_y, width, height, type="num"):
     pytesseract.pytesseract.tesseract_cmd = r'D:\Alkalmazasok\Tesseract\tesseract.exe'
@@ -78,8 +78,8 @@ def recognize_text(monitor_x, monitor_y, width, height, type="num"):
     print("Felismerés eredménye:", recognized_text)
     return(recognized_text)
 
-def bouncing():
-    first_xy, vector
+def bouncing(starting_xy,squares):
+    first_xy, vector = [0,0],[0,0]
     
     while(-max_x <= vector[0]) and (vector[0] <= max_x):
         first_xy = [random.randint(-max_x, max_x), random.randint(5, 20)]
@@ -158,12 +158,12 @@ def get_squares_triangles():
 
     # Képek megjelenítése
     cv2.imshow("Squares and Triangles", image_np)
-    cv2.waitKey(2000)
+    cv2.waitKey(1000)
     cv2.destroyAllWindows()
     
     return squares, triangles
 
-def calculate_reward():
+def calculate_reward(squares, triangles):
     #Négyzetek, h-szögek keresése
     new_squares, new_triangles = get_squares_triangles()
 
@@ -177,7 +177,7 @@ def calculate_reward():
         triangles = new_triangles
         return -100
 
-def check_game_over():
+def check_game_over(step):
     #Befejezés ha leértek a labdák és COUNTINUE megjelenik
     # pyautogui.moveTo(95, 675, 1)
     # pyautogui.moveTo(95+175, 675+45, 1)
@@ -188,67 +188,95 @@ def check_game_over():
     
     return text == "CONTINUE"
 
+def jatekmenet():
+    #Felismert szöveg a befejezéshez
+    text = ""
+
+    #Felismert sorok száma a kezdéshez (felül. pl.: line 26)
+    rows = 0
+    #Lépés a módtól függően. Ha classic akkor +1 egyébként -1
+    step = -1
+    try:
+        rows = int(recognize_text(280, 155, 50, 35).strip())
+    except:
+        rows = 1
+        step = 1
+        
+    # Játék ügynök létrehozása
+    # agent = Agent(state_size=max_x*max_y, action_size=max_x*max_y)
+
+    #Kezdőpozíció
+    starting_xy = np.array([0, 0])
+
+    # Négyzetek és háromszögek tárolására szolgáló listák
+    squares = []
+    triangles = []
+
+    #Négyzetek, h-szögek keresése
+    squares, triangles = get_squares_triangles()
+
+    total_reward = 0
+
+    for episode in range(1000):
+        
+        # x_num = random.randint(5,555)
+        # y_num = random.randint(5,800)
+        # action = np.array(x_num, y_num)
+        # pyautogui.click(x=x_num, y=y_num)
+        # pyautogui.moveTo(250,500)
+        action = agent.choose_action([*starting_xy, *squares, *triangles])
+        time.sleep(1)
+        #kattintás x=[5,550] y=[5,400]
+        pyautogui.click(x=255+action[0], y=455+action[1])
+        time.sleep(1)
+        pyautogui.moveTo(250,500)
+
+        remaining_rows_now = 999
+        #Addig olvassa a számot, míg nem csökken a sorok száma
+        while(rows+step != remaining_rows_now):
+            if step == -1:
+                remaining_rows_now = int(recognize_text(280, 155, 50, 35).strip())
+            else:
+                remaining_rows_now = int(recognize_text(230, 140, 245, 60, "classic").strip())
+        
+        #Sorok számának felülírása    
+        rows = remaining_rows_now
+        
+        # Jutalom és következő állapot számítása
+        reward = calculate_reward(squares, triangles)
+        total_reward += reward
+        done = check_game_over(step)  # Ellenőrizd, hogy a játék végetért-e
+
+        # Ügynök tanulása és lépés a következő állapotba
+        #next_state = bouncing(starting_xy)
+        squares, triangles = get_squares_triangles()
+        time.sleep(1)
+        agent.remember([*starting_xy, *squares, *triangles], action, reward, [*starting_xy, *squares, *triangles], done)
+        agent.replay(batch_size=32)
+
+        if done:
+            print("Epizód: {}/{}, Jutalom: {}".format(episode, 1000, total_reward))
+            # Főablak létrehozása
+            root = tk.Tk()
+            root.title("Folytatás")
+
+            # Gomb létrehozása
+            button = tk.Button(root, text="Indítás", command=lambda: root.destroy() and jatekmenet())
+            button.pack(pady=20)
+
+            # Főablak megjelenítése
+            root.mainloop()
+
+
+
+global max_x,max_y,text,rows,step,agent,starting_xy,squares,triangles,total_reward
+
 #Maximumok
 max_x = 250
 max_y = 800
 
-#Felismert szöveg a befejezéshez
-text = ""
-
-#Felismert sorok száma a kezdéshez (felül. pl.: line 26)
-rows = 0
-#Lépésa módtól függően. Ha classic akkor +1 egyébként -1
-step = -1
-try:
-    rows = int(recognize_text(280, 155, 50, 35).strip())
-except:
-    rows = 1
-    step = 1
-    
 # Játék ügynök létrehozása
-agent = Agent(state_size=2, action_size=1)
+agent = Agent(state_size=max_x*max_y, action_size=max_x*max_y)
 
-#Kezdőpozíció
-starting_xy = np.array([[0, 0]])
 
-# Négyzetek és háromszögek tárolására szolgáló listák
-squares = []
-triangles = []
-
-#Négyzetek, h-szögek keresése
-squares, triangles = get_squares_triangles()
-
-total_reward = 0
-
-for episode in range(1000):
-    
-    x_num = random.randint(5,555)
-    y_num = random.randint(5,800)
-    action = np.array(x_num, y_num)
-    pyautogui.click(x=x_num, y=y_num)
-    pyautogui.moveTo(250,500)
-
-    remaining_rows_now = 999
-    #Addig olvassa a számot, míg nem csökken a sorok száma
-    while(rows+step != remaining_rows_now):
-        if step == -1:
-            remaining_rows_now = int(recognize_text(280, 155, 50, 35).strip())
-        else:
-            remaining_rows_now = int(recognize_text(230, 140, 245, 60, "classic").strip())
-    
-    #Sorok számának felülírása    
-    rows = remaining_rows_now
-    
-     # Jutalom és következő állapot számítása
-    reward = calculate_reward()
-    total_reward += reward
-    done = check_game_over()  # Ellenőrizd, hogy a játék végetért-e
-
-    # Ügynök tanulása és lépés a következő állapotba
-    next_state = bouncing()
-    agent.remember(starting_xy, action, reward, next_state, done)
-    agent.replay(batch_size=32)
-
-    if done:
-        print("Epizód: {}/{}, Jutalom: {}".format(episode, 1000, total_reward))
-        break
+jatekmenet()
