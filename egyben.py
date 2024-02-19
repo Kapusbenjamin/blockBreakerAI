@@ -189,8 +189,8 @@ def check_game_over(step):
     return text == "CONTINUE"
 
 def jatekmenet():
-    #Felismert szöveg a befejezéshez
-    text = ""
+    # #Felismert szöveg a befejezéshez
+    # text = ""
 
     #Felismert sorok száma a kezdéshez (felül. pl.: line 26)
     rows = 0
