@@ -27,7 +27,7 @@ class Agent:
     def replay(self, batch_size):
         if len(self.memory) < batch_size:
             return
-        minibatch = np.random.choice(list(self.memory), batch_size, replace=False)
+        minibatch = np.random.choice(np.ndarray([self.memory], dtype=object), batch_size, replace=False)
         for state, action, reward, next_state, done in minibatch:
             target = reward
             if not done:

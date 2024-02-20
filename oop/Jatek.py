@@ -67,19 +67,32 @@ class Jatek:
                 #Sorok számának felülírása    
                 self.rows = remaining_rows_now
                 
+                self.done = self.check_game_over()  # Ellenőrizd, hogy a játék végetért-e
+                
                 # Jutalom és következő állapot számítása
-                reward = self.calculate_reward()
+                if self.done:
+                    reward = 1000
+                else:
+                    reward = self.calculate_reward()
                 self.total_reward += reward
                 print(reward)
                 time.sleep(1)
                 
-                self.done = self.check_game_over()  # Ellenőrizd, hogy a játék végetért-e
-
                 # Ügynök tanulása és lépés a következő állapotba
                 #next_state = bouncing(starting_xy)
+                old_state = np.array([*self.starting_xy, *self.squares, *self.triangles], dtype=object)
                 self.get_squares_triangles()
+                
+                #Labdák (kezdőpozíció) keresése
+                if self.done:
+                    self.starting_xy = np.array([0,0])
+                else:
+                    x, y = self.get_circle()
+                    self.starting_xy = np.array([x,y])
+                    print(f"Kör: x={x}, y={y}")
                 time.sleep(1)
-                self.agent.remember([*self.starting_xy, *self.squares, *self.triangles], action, reward, [*self.starting_xy, *self.squares, *self.triangles], self.done)
+                
+                self.agent.remember(old_state, action, reward, np.array([*self.starting_xy, *self.squares, *self.triangles], dtype=object), self.done)
                 self.agent.replay(batch_size=32)
 
                 if self.done:
@@ -96,14 +109,17 @@ class Jatek:
                     # Főablak megjelenítése
                     root.mainloop()
      
-    def get_squares_triangles(self):
+    def get_squares_triangles(self, old=False):
         self.squares = []
         self.triangles = []
         
         # Képernyőrészlet elkapása a négyzet körül
         square_x, square_y, square_width, square_height = 5, 270, 555, 570
-        screenshot = ImageGrab.grab(bbox=(square_x, square_y, square_x + square_width, square_y + square_height))
 
+        if old:
+            square_x, square_y, square_width, square_height = 5, 340, 555, 500
+
+        screenshot = ImageGrab.grab(bbox=(square_x, square_y, square_x + square_width, square_y + square_height))
         image_np = np.array(screenshot)
 
         # Szürkeárnyalat konverzió
@@ -144,19 +160,49 @@ class Jatek:
         cv2.waitKey(1000)
         cv2.destroyAllWindows()
 
+    def get_circle(self):
+        # Képernyőkép készítése
+        screenshot = ImageGrab.grab(bbox=(5, 855, 550, 890))
+        
+        # Képet NumPy tömbbé konvertáljuk
+        target = np.array(screenshot)
+
+        # Kép konvertálása szürkeárnyalatosra
+        gray = cv2.cvtColor(target, cv2.COLOR_BGR2GRAY)
+
+        # Kör detektálása
+        circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
+                               param1=50, param2=30, minRadius=10, maxRadius=100)
+
+        while circles is None:
+            circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20,
+                               param1=50, param2=30, minRadius=10, maxRadius=100)
+            # Éldetektálás
+            edges = cv2.Canny(gray, 50, 150)
+
+            # Kontúrkeresés
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if len(contours) > 0:
+                return 0,0
+        
+        circles = np.uint16(np.around(circles))
+        for i in circles[0, :]:
+            center_x, center_y = int(i[0]+i[2]/2), i[1]
+            return center_x, center_y
+
     def calculate_reward(self):
         #Előző állapot
         old_squares = self.squares
         old_triangles = self.triangles
         
         #Négyzetek, h-szögek keresése
-        self.get_squares_triangles()
+        self.get_squares_triangles(old=True)
 
         if(len(self.squares)+len(self.triangles) < len(old_squares)+len(old_triangles)):
             reward = ((len(old_squares)+len(old_triangles))-(len(self.squares)+len(self.triangles)))*100
-            return reward-100
+            return reward+1000
         else:
-            return -100
+            return 1000
 
     def check_game_over(self):
         #Befejezés ha leértek a labdák és COUNTINUE megjelenik
