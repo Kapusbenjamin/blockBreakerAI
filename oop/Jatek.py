@@ -24,10 +24,15 @@ class Jatek:
         #Lépés a módtól függően. Ha classic akkor +1 egyébként -1
         self.step = -1
         try:
+            #napi challenge
             self.rows = int(self.recognize_text(280, 155, 50, 35).strip())
         except:
-            self.rows = 1
-            self.step = 1
+            try:
+                #challenge
+                self.rows = int(self.recognize_text(195, 185, 55, 25).strip())
+            except:
+                self.rows = 1
+                self.step = 1
             
         #Kezdőpozíció
         self.starting_xy = np.array([0, 0])
